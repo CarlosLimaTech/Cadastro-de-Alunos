@@ -33,7 +33,7 @@ class SistemaDeCadastro:
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (estudantes)
         )
-        self.conn.commit
+        self.conn.commit()
 
         messagebox.showinfo('Sucesso', 'Registro salvo com sucesso!')
     
