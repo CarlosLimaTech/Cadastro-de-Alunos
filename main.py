@@ -41,32 +41,25 @@ class SistemaDeCadastro:
         self.c.execute("SELECT id, nome, email, telefone, sexo, data_nascimento, endereco, curso, picture FROM estudantes")
         dados = self.c.fetchall()
 
-        for dado in dados:
-            self.show_students(dado)
-
-        messagebox.showinfo('Sucesso', 'Estudantes encontrado com sucesso')
+        return dados
     
     def search_student(self, id):
         self.c.execute(
-            "SELECT id, nome, email, telefone, sexo, data_nascimento, endereco, curso, picture "
-            "FROM estudantes "
-            "WHERE id = ?",
-            (id,))
-        dados = self.c.fetchall()
-        for dado in dados:
-            self.show_students(dado)
-        messagebox.showinfo('Sucesso', 'Estudante encontrado com sucesso')
+            "SELECT * FROM estudantes WHERE id = ?", (id,))
+        dados = self.c.fetchone()
+        
+        return dados
 
     def update_student(self, estudante):
         query = "UPDATE estudantes SET nome=?, email=?, telefone=?, sexo=?, data_nascimento=?, endereco=?, curso=?, picture=? WHERE id=?"
             
         self.c.execute(query, estudante)
         self.conn.commit()
-        messagebox.showinfo('Sucesso', f'Estudante com ID:{estudante[8]} atulizado!')
+        messagebox.showinfo('Sucesso', f'Estudante com ID: {estudante[8]} atulizado!')
 
     def delete_student(self, id):
-        self.c.execute("DELETE FROM estudantes"
-                       "WHERE id=?",
-                       (id))
+        self.c.execute("DELETE FROM estudantes WHERE id=?", (id,))
         self.conn.commit()
-        messagebox.showinfo('Sucesso', f'Estudante com ID:{id} deletado!')
+        messagebox.showinfo('Sucesso', f'Estudante com ID: {id} deletado!')
+
+sistemaDeCadastro = SistemaDeCadastro()
