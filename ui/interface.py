@@ -87,9 +87,9 @@ class InterfaceCadastro:
         Button(frame_procurar, command=self.procurar, text='Procurar', font=('Ivy 7 bold'), bg='#feffff').grid(row=1, column=1)
 
         # Botões de ação
-        self.botao_adicionar = self._criar_botao("Adicionar", self.adicionar, 'add.png', 1)
-        self.botao_update = self._criar_botao("Atualizar", self.atualizar, 'update.png', 2)
-        self.botao_delete = self._criar_botao("Deletar", self.deletar, 'del.png', 3)
+        self.botao_adicionar = self._criar_botao("  Adicionar", self.adicionar, 'add.png', 1)
+        self.botao_update = self._criar_botao("  Atualizar ", self.atualizar, 'update.png', 2)
+        self.botao_delete = self._criar_botao("  Deletar   ", self.deletar, 'del.png', 3)
 
         #Desativando os botões no início
         self.botao_adicionar.config(state=NORMAL)
