@@ -13,6 +13,7 @@ class InterfaceCadastro:
         self.root.geometry('810x535')
         self.root.configure(background='#feffff')
         self.root.resizable(width=False, height=False)
+        self.id_atual = None
 
         self.db = SistemaDeCadastro()
         self.imagem_path = 'assets/icons/Logo.png'
@@ -124,6 +125,7 @@ class InterfaceCadastro:
         nova_img = ImageTk.PhotoImage(Image.open(self.imagem_path).resize((130, 130)))
         self.img_label.configure(image=nova_img)
         self.img_label.image = nova_img
+        self.id_atual = None
         self.botao_adicionar.config(state=NORMAL)
 
     def adicionar(self):
@@ -161,6 +163,8 @@ class InterfaceCadastro:
                 nova_img = ImageTk.PhotoImage(Image.open(self.imagem_path).resize((130, 130)))
                 self.img_label.configure(image=nova_img)
                 self.img_label.image = nova_img
+                self.id_atual = aluno[0]
+                self.e_procurar.delete(0, END)
                 self.botao_adicionar.config(state=DISABLED)
             else:
                 messagebox.showerror("Erro", "Aluno não encontrado.")
@@ -169,11 +173,13 @@ class InterfaceCadastro:
 
     def atualizar(self):
         try:
-            id_aluno = int(self.e_procurar.get())
+            if self.id_atual is None:
+                messagebox.showerror("Erro", "Nenhum aluno selecionado para atualizar.")
+                return
             dados = [
                 self.e_nome.get(), self.e_email.get(), self.e_telefone.get(),
                 self.c_sexo.get(), self.data_nascimento.get(), self.e_endereco.get(),
-                self.c_curso.get(), self.imagem_path, id_aluno
+                self.c_curso.get(), self.imagem_path, self.id_atual
             ]
             if '' in dados[:-1]:
                 messagebox.showerror("Erro", "Preencha todos os campos.")
@@ -186,8 +192,10 @@ class InterfaceCadastro:
 
     def deletar(self):
         try:
-            id_aluno = int(self.e_procurar.get())
-            self.db.delete_student(id_aluno)
+            if self.id_atual is None:
+                messagebox.showerror("Erro", "Nenhum aluno selecionado para deletar.")
+                return
+            self.db.delete_student(self.id_atual)
             self.limpar_campos()
             self.mostrar_alunos()
         except ValueError:
