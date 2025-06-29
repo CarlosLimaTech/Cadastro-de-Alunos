@@ -88,8 +88,13 @@ class InterfaceCadastro:
 
         # Botões de ação
         self.botao_adicionar = self._criar_botao("Adicionar", self.adicionar, 'add.png', 1)
-        self._criar_botao("Atualizar", self.atualizar, 'update.png', 2)
-        self._criar_botao("Deletar", self.deletar, 'del.png', 3)
+        self.botao_update = self._criar_botao("Atualizar", self.atualizar, 'update.png', 2)
+        self.botao_delete = self._criar_botao("Deletar", self.deletar, 'del.png', 3)
+
+        # 🔒 Desativando os botões no início
+        self.botao_adicionar.config(state=NORMAL)
+        self.botao_update.config(state=DISABLED)
+        self.botao_delete.config(state=DISABLED)
 
     def _criar_entry(self, texto, x1, y1, x2, y2, width=30):
         Label(self.frame_detalhes, text=texto, font=('Ivy 10'), bg='#feffff').place(x=x1, y=y1)
@@ -127,6 +132,8 @@ class InterfaceCadastro:
         self.img_label.image = nova_img
         self.id_atual = None
         self.botao_adicionar.config(state=NORMAL)
+        self.botao_update.config(state=DISABLED)
+        self.botao_delete.config(state=DISABLED)
 
     def adicionar(self):
         campos = [
@@ -166,6 +173,8 @@ class InterfaceCadastro:
                 self.id_atual = aluno[0]
                 self.e_procurar.delete(0, END)
                 self.botao_adicionar.config(state=DISABLED)
+                self.botao_update.config(state=NORMAL)
+                self.botao_delete.config(state=NORMAL)
             else:
                 messagebox.showerror("Erro", "Aluno não encontrado.")
         except ValueError:
@@ -187,6 +196,8 @@ class InterfaceCadastro:
             self.db.update_student(dados)
             self.limpar_campos()
             self.mostrar_alunos()
+            self.botao_update.config(state=DISABLED)
+            self.botao_delete.config(state=DISABLED)
         except ValueError:
             messagebox.showerror("Erro", "ID inválido.")
 
@@ -198,6 +209,8 @@ class InterfaceCadastro:
             self.db.delete_student(self.id_atual)
             self.limpar_campos()
             self.mostrar_alunos()
+            self.botao_update.config(state=DISABLED)
+            self.botao_delete.config(state=DISABLED)
         except ValueError:
             messagebox.showerror("Erro", "ID inválido.")
 
