@@ -5,6 +5,15 @@ from tkinter import ttk, messagebox, filedialog
 from tkcalendar import DateEntry
 from PIL import Image, ImageTk
 from database.db_manager import SistemaDeCadastro
+from validacoes import (
+    validar_nome_completo,
+    validar_email,
+    validar_telefone,
+    validar_sexo,
+    validar_endereco,
+    normalizar_texto,
+    validar_curso
+)
 
 class InterfaceCadastro:
     def __init__(self, root):
@@ -67,9 +76,13 @@ class InterfaceCadastro:
         self.e_endereco = self._criar_entry("Endereço *", 220, 70, 224, 100, width=18)
 
         Label(self.frame_detalhes, text="Curso *", font=('Ivy 10'), bg='#feffff').place(x=220, y=130)
-        self.c_curso = ttk.Combobox(self.frame_detalhes, values=['Engenharia', 'Medicina', 'ADS'], width=15,
-                                    font=('Ivy 8'), justify='center')
+        cursos = self.db.get_cursos()
+        self.c_curso = ttk.Combobox(self.frame_detalhes, values=cursos, width=15, font=('Ivy 8'), justify='center')
         self.c_curso.place(x=224, y=160)
+        self.carregar_cursos()
+        btn_add_curso = Button(self.frame_detalhes, text="+", command=self.abrir_popup_curso, width=2, font=('Ivy 7 bold'), bg="#e1e1e1")
+        btn_add_curso.place(x=340, y=160)
+
 
         # Botão carregar imagem
         self.botao_carregar = Button(self.frame_detalhes, command=self.escolher_imagem,
@@ -132,17 +145,52 @@ class InterfaceCadastro:
         self.img_label.image = nova_img
         self.id_atual = None
         self.desativar_botoes_edicao()
+        self.carregar_cursos()
 
     def adicionar(self):
-        campos = [
-            self.e_nome.get(), self.e_email.get(), self.e_telefone.get(),
-            self.c_sexo.get(), self.data_nascimento.get(), self.e_endereco.get(),
-            self.c_curso.get(), self.imagem_path
-        ]
-        if '' in campos:
+        # Pegando os dados dos campos
+        nome = self.e_nome.get()
+        email = self.e_email.get()
+        telefone = self.e_telefone.get()
+        sexo = self.c_sexo.get()
+        data = self.data_nascimento.get()
+        endereco = self.e_endereco.get()
+        curso = self.c_curso.get()
+        imagem = self.imagem_path
+
+        # Verificação de campos obrigatórios
+        if '' in [nome, email, telefone, sexo, data, endereco, curso]:
             messagebox.showerror("Erro", "Preencha todos os campos.")
             return
-        self.db.register_students(campos)
+
+        # Validações específicas
+        if not validar_nome_completo(nome):
+            messagebox.showerror("Erro", "Informe o nome completo (nome e sobrenome).")
+            return
+
+        if not validar_email(email):
+            messagebox.showerror("Erro", "E-mail inválido.")
+            return
+
+        if not validar_telefone(telefone):
+            messagebox.showerror("Erro", "Telefone deve estar no formato (XX) XXXXX-XXXX.")
+            return
+
+        if not validar_sexo(sexo):
+            messagebox.showerror("Erro", "Sexo deve ser 'M' ou 'F'.")
+            return
+
+        if not validar_endereco(endereco):
+            messagebox.showerror("Erro", "Endereço não pode estar vazio.")
+            return
+
+        if not validar_curso(curso, self.db.get_cursos()):
+            messagebox.showerror("Erro", "Curso inválido.")
+            return
+
+        self.db.register_students([
+            nome, email, telefone, sexo, data, endereco, curso, imagem
+        ])
         self.limpar_campos()
         self.mostrar_alunos()
 
@@ -183,18 +231,53 @@ class InterfaceCadastro:
             if self.id_atual is None:
                 messagebox.showerror("Erro", "Nenhum aluno selecionado para atualizar.")
                 return
-            dados = [
-                self.e_nome.get(), self.e_email.get(), self.e_telefone.get(),
-                self.c_sexo.get(), self.data_nascimento.get(), self.e_endereco.get(),
-                self.c_curso.get(), self.imagem_path, self.id_atual
-            ]
-            if '' in dados[:-1]:
+
+            # Pegando os dados dos campos
+            nome = self.e_nome.get()
+            email = self.e_email.get()
+            telefone = self.e_telefone.get()
+            sexo = self.c_sexo.get()
+            data = self.data_nascimento.get()
+            endereco = self.e_endereco.get()
+            curso = self.c_curso.get()
+            imagem = self.imagem_path
+
+            if '' in [nome, email, telefone, sexo, data, endereco, curso]:
                 messagebox.showerror("Erro", "Preencha todos os campos.")
                 return
+
+            # Validações específicas
+            if not validar_nome_completo(nome):
+                messagebox.showerror("Erro", "Informe o nome completo (nome e sobrenome).")
+                return
+
+            if not validar_email(email):
+                messagebox.showerror("Erro", "E-mail inválido.")
+                return
+
+            if not validar_telefone(telefone):
+                messagebox.showerror("Erro", "Telefone deve estar no formato (XX) XXXXX-XXXX.")
+                return
+
+            if not validar_sexo(sexo):
+                messagebox.showerror("Erro", "Sexo deve ser 'M' ou 'F'.")
+                return
+
+            if not validar_endereco(endereco):
+                messagebox.showerror("Erro", "Endereço não pode estar vazio.")
+                return
+
+            if not validar_curso(curso, self.db.get_cursos()):
+                messagebox.showerror("Erro", "Curso inválido.")
+                return
+
+            # Atualização
+            dados = [nome, email, telefone, sexo, data, endereco, curso, imagem, self.id_atual]
             self.db.update_student(dados)
             self.limpar_campos()
             self.desativar_botoes_edicao()
             self.mostrar_alunos()
+
         except ValueError:
             messagebox.showerror("Erro", "ID inválido.")
 
@@ -242,6 +325,40 @@ class InterfaceCadastro:
         self.botao_adicionar.config(state=NORMAL)
         self.botao_update.config(state=DISABLED)
         self.botao_delete.config(state=DISABLED)
+
+    def carregar_cursos(self):
+        cursos = self.db.get_cursos()
+        self.c_curso['values'] = cursos
+
+    def abrir_popup_curso(self):
+        def salvar():
+            nome = entrada.get().strip()
+            if nome == "":
+                messagebox.showwarning("Aviso", "O nome do curso não pode estar vazio.")
+                return
+
+            cursos_existentes = self.db.get_cursos()
+            if normalizar_texto(nome) in [normalizar_texto(c) for c in cursos_existentes]:
+                messagebox.showinfo("Aviso", "Esse curso já existe.")
+                return
+
+            sucesso = self.db.adicionar_curso(nome)
+            if sucesso:
+                messagebox.showinfo("Sucesso", f"Curso '{nome}' adicionado com sucesso.")
+                self.carregar_cursos()  # Atualiza o combobox
+                popup.destroy()
+            else:
+                messagebox.showerror("Erro", "Erro ao adicionar curso.")
+
+        popup = Toplevel(self.root)
+        popup.title("Adicionar novo curso")
+        popup.geometry("300x100")
+        popup.resizable(False, False)
+
+        Label(popup, text="Nome do curso:").grid(row=0, column=0, sticky='w', padx=10, pady=(10, 2))
+        entrada = Entry(popup, width=30)
+        entrada.grid(row=1, column=0, padx=10, pady=(0, 5))
+        Button(popup, text="Salvar", command=salvar).grid(row=2, column=0, sticky='w', padx=10, pady=(0, 10))
 
 def main():
     root = Tk()
