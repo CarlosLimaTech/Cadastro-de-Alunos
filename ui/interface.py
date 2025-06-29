@@ -91,7 +91,7 @@ class InterfaceCadastro:
         self.botao_update = self._criar_botao("Atualizar", self.atualizar, 'update.png', 2)
         self.botao_delete = self._criar_botao("Deletar", self.deletar, 'del.png', 3)
 
-        # 🔒 Desativando os botões no início
+        #Desativando os botões no início
         self.botao_adicionar.config(state=NORMAL)
         self.botao_update.config(state=DISABLED)
         self.botao_delete.config(state=DISABLED)
@@ -131,9 +131,7 @@ class InterfaceCadastro:
         self.img_label.configure(image=nova_img)
         self.img_label.image = nova_img
         self.id_atual = None
-        self.botao_adicionar.config(state=NORMAL)
-        self.botao_update.config(state=DISABLED)
-        self.botao_delete.config(state=DISABLED)
+        self.desativar_botoes_edicao()
 
     def adicionar(self):
         campos = [
@@ -195,9 +193,8 @@ class InterfaceCadastro:
                 return
             self.db.update_student(dados)
             self.limpar_campos()
+            self.desativar_botoes_edicao()
             self.mostrar_alunos()
-            self.botao_update.config(state=DISABLED)
-            self.botao_delete.config(state=DISABLED)
         except ValueError:
             messagebox.showerror("Erro", "ID inválido.")
 
@@ -208,9 +205,8 @@ class InterfaceCadastro:
                 return
             self.db.delete_student(self.id_atual)
             self.limpar_campos()
+            self.desativar_botoes_edicao()
             self.mostrar_alunos()
-            self.botao_update.config(state=DISABLED)
-            self.botao_delete.config(state=DISABLED)
         except ValueError:
             messagebox.showerror("Erro", "ID inválido.")
 
@@ -241,6 +237,11 @@ class InterfaceCadastro:
 
         for item in df_list:
             tree_aluno.insert('', 'end', values=item)
+
+    def desativar_botoes_edicao(self):
+        self.botao_adicionar.config(state=NORMAL)
+        self.botao_update.config(state=DISABLED)
+        self.botao_delete.config(state=DISABLED)
 
 def main():
     root = Tk()
