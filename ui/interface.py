@@ -63,7 +63,7 @@ class InterfaceCadastro:
                                          background='darkblue', foreground='white', borderwidth=2, year=2025)
         self.data_nascimento.place(x=224, y=40)
 
-        self.e_endereco = self._criar_entry("Endereço *", 220, 70, 224, 100, width=15)
+        self.e_endereco = self._criar_entry("Endereço *", 220, 70, 224, 100, width=18)
 
         Label(self.frame_detalhes, text="Curso *", font=('Ivy 10'), bg='#feffff').place(x=220, y=130)
         self.c_curso = ttk.Combobox(self.frame_detalhes, values=['Engenharia', 'Medicina', 'ADS'], width=15,
@@ -86,7 +86,7 @@ class InterfaceCadastro:
         Button(frame_procurar, command=self.procurar, text='Procurar', font=('Ivy 7 bold'), bg='#feffff').grid(row=1, column=1)
 
         # Botões de ação
-        self._criar_botao("Adicionar", self.adicionar, 'add.png', 1)
+        self.botao_adicionar = self._criar_botao("Adicionar", self.adicionar, 'add.png', 1)
         self._criar_botao("Atualizar", self.atualizar, 'update.png', 2)
         self._criar_botao("Deletar", self.deletar, 'del.png', 3)
 
@@ -99,9 +99,11 @@ class InterfaceCadastro:
     def _criar_botao(self, texto, comando, icone, linha):
         img = ImageTk.PhotoImage(Image.open(f'assets/icons/{icone}').resize((25, 25)))
         btn = Button(self.frame_botoes, command=comando, image=img, text=f'  {texto}', width=100,
-                     compound=LEFT, font=('Ivy 11'), bg='#feffff')
+                    compound=LEFT, font=('Ivy 11'), bg='#feffff')
         btn.image = img
         btn.grid(row=linha, column=0, pady=5, padx=10, sticky=NSEW)
+        return btn  # ← isso é novo
+
 
     def escolher_imagem(self):
         imagem_path = filedialog.askopenfilename()
@@ -122,6 +124,7 @@ class InterfaceCadastro:
         nova_img = ImageTk.PhotoImage(Image.open(self.imagem_path).resize((130, 130)))
         self.img_label.configure(image=nova_img)
         self.img_label.image = nova_img
+        self.botao_adicionar.config(state=NORMAL)
 
     def adicionar(self):
         campos = [
@@ -158,6 +161,7 @@ class InterfaceCadastro:
                 nova_img = ImageTk.PhotoImage(Image.open(self.imagem_path).resize((130, 130)))
                 self.img_label.configure(image=nova_img)
                 self.img_label.image = nova_img
+                self.botao_adicionar.config(state=DISABLED)
             else:
                 messagebox.showerror("Erro", "Aluno não encontrado.")
         except ValueError:
