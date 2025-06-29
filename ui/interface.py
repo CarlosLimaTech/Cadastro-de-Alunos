@@ -80,8 +80,8 @@ class InterfaceCadastro:
         frame_procurar = Frame(self.frame_botoes, bg='#feffff')
         frame_procurar.grid(row=0, column=0, pady=10, padx=10)
 
-        Label(frame_procurar, text="Procurar aluno por Id", bg='#feffff').grid(row=0, column=0, sticky=W)
-        self.e_procurar = Entry(frame_procurar, width=20, justify='center', relief='solid')
+        Label(frame_procurar, text="Procurar aluno por Id", font=('Ivy 10'), bg='#feffff').grid(row=0, column=0, sticky=W)
+        self.e_procurar = Entry(frame_procurar, width=20, justify='cente', relief='solid')
         self.e_procurar.grid(row=1, column=0, pady=5)
 
         Button(frame_procurar, command=self.procurar, text='Procurar', font=('Ivy 7 bold'), bg='#feffff').grid(row=1, column=1)
