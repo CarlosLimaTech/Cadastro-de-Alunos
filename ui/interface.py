@@ -14,12 +14,14 @@ from validacoes import (
     normalizar_texto,
     validar_curso
 )
+import pandas as pd
+from tkinter import filedialog
 
 class InterfaceCadastro:
     def __init__(self, root):
         self.root = root
         self.root.title("Cadastro de Alunos")
-        self.root.geometry('810x535')
+        self.root.geometry('810x550')
         self.root.configure(background='#feffff')
         self.root.resizable(width=False, height=False)
         self.id_atual = None
@@ -83,7 +85,6 @@ class InterfaceCadastro:
         btn_add_curso = Button(self.frame_detalhes, text="+", command=self.abrir_popup_curso, width=2, font=('Ivy 7 bold'), bg="#e1e1e1")
         btn_add_curso.place(x=340, y=160)
 
-
         # Botão carregar imagem
         self.botao_carregar = Button(self.frame_detalhes, command=self.escolher_imagem,
                                      text='Carregar Foto', width=20, font=('Ivy 7 bold'), bg='#feffff')
@@ -94,7 +95,7 @@ class InterfaceCadastro:
         frame_procurar.grid(row=0, column=0, pady=10, padx=10)
 
         Label(frame_procurar, text="Procurar aluno por Id", font=('Ivy 10'), bg='#feffff').grid(row=0, column=0, sticky=W)
-        self.e_procurar = Entry(frame_procurar, width=20, justify='cente', relief='solid')
+        self.e_procurar = Entry(frame_procurar, width=20, justify='center', relief='solid')
         self.e_procurar.grid(row=1, column=0, pady=5)
 
         Button(frame_procurar, command=self.procurar, text='Procurar', font=('Ivy 7 bold'), bg='#feffff').grid(row=1, column=1)
@@ -103,6 +104,7 @@ class InterfaceCadastro:
         self.botao_adicionar = self._criar_botao("  Adicionar", self.adicionar, 'add.png', 1)
         self.botao_update = self._criar_botao("  Atualizar ", self.atualizar, 'update.png', 2)
         self.botao_delete = self._criar_botao("  Deletar   ", self.deletar, 'del.png', 3)
+        self.botao_excel = self._criar_botao("  Importar/Exportar", self.abrir_popup_excel, 'excel.png', 4)
 
         #Desativando os botões no início
         self.botao_adicionar.config(state=NORMAL)
@@ -121,7 +123,7 @@ class InterfaceCadastro:
                     compound=LEFT, font=('Ivy 11'), bg='#feffff')
         btn.image = img
         btn.grid(row=linha, column=0, pady=5, padx=10, sticky=NSEW)
-        return btn  # ← isso é novo
+        return btn
 
 
     def escolher_imagem(self):
@@ -138,7 +140,7 @@ class InterfaceCadastro:
             campo.delete(0, END)
         for combo in [self.c_sexo, self.c_curso]:
             combo.set('')
-        self.data_nascimento.set_date(date.today())  # ← Aqui está o fix
+        self.data_nascimento.set_date(date.today())
         self.imagem_path = 'assets/icons/Logo.png'
         nova_img = ImageTk.PhotoImage(Image.open(self.imagem_path).resize((130, 130)))
         self.img_label.configure(image=nova_img)
@@ -148,7 +150,6 @@ class InterfaceCadastro:
         self.carregar_cursos()
 
     def adicionar(self):
-        # Pegando os dados dos campos
         nome = self.e_nome.get()
         email = self.e_email.get()
         telefone = self.e_telefone.get()
@@ -163,7 +164,6 @@ class InterfaceCadastro:
             messagebox.showerror("Erro", "Preencha todos os campos.")
             return
 
-        # Validações específicas
         if not validar_nome_completo(nome):
             messagebox.showerror("Erro", "Informe o nome completo (nome e sobrenome).")
             return
@@ -232,7 +232,6 @@ class InterfaceCadastro:
                 messagebox.showerror("Erro", "Nenhum aluno selecionado para atualizar.")
                 return
 
-            # Pegando os dados dos campos
             nome = self.e_nome.get()
             email = self.e_email.get()
             telefone = self.e_telefone.get()
@@ -245,8 +244,7 @@ class InterfaceCadastro:
             if '' in [nome, email, telefone, sexo, data, endereco, curso]:
                 messagebox.showerror("Erro", "Preencha todos os campos.")
                 return
-
-            # Validações específicas
+            
             if not validar_nome_completo(nome):
                 messagebox.showerror("Erro", "Informe o nome completo (nome e sobrenome).")
                 return
@@ -271,7 +269,6 @@ class InterfaceCadastro:
                 messagebox.showerror("Erro", "Curso inválido.")
                 return
 
-            # Atualização
             dados = [nome, email, telefone, sexo, data, endereco, curso, imagem, self.id_atual]
             self.db.update_student(dados)
             self.limpar_campos()
@@ -300,7 +297,7 @@ class InterfaceCadastro:
 
         tree_aluno = ttk.Treeview(self.frame_tabela, selectmode='extended', columns=list_header, show="headings")
 
-        vsb = ttk.Scrollbar(self.frame_tabela, orient="vertical", command=tree_aluno.xview)
+        vsb = ttk.Scrollbar(self.frame_tabela, orient="vertical", command=tree_aluno.yview)
         hsb = ttk.Scrollbar(self.frame_tabela, orient="horizontal", command=tree_aluno.xview)
 
         tree_aluno.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
@@ -359,6 +356,148 @@ class InterfaceCadastro:
         entrada = Entry(popup, width=30)
         entrada.grid(row=1, column=0, padx=10, pady=(0, 5))
         Button(popup, text="Salvar", command=salvar).grid(row=2, column=0, sticky='w', padx=10, pady=(0, 10))
+
+    def exportar_excel(self):
+        from pandas import DataFrame
+        dados = self.db.view_all_students()
+        if not dados:
+            messagebox.showinfo("Aviso", "Não há dados para exportar.")
+            return
+
+        dados_sem_imagem = [linha[:-1] for linha in dados]  # remove última coluna (imagem_path)
+        colunas = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
+        df = DataFrame(dados_sem_imagem, columns=colunas)
+
+
+        caminho = filedialog.asksaveasfilename(
+            defaultextension='.xlsx',
+            filetypes=[('Planilha Excel', '*.xlsx')],
+            title='Salvar dados'
+        )
+        if caminho:
+            try:
+                df.to_excel(caminho, index=False)
+                messagebox.showinfo("Sucesso", "Exportação concluída!")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao exportar: {e}")
+    
+    def abrir_popup_excel(self):
+        popup = Toplevel(self.root)
+        popup.title("Importar / Exportar Excel")
+        popup.geometry("300x160")
+        popup.resizable(False, False)
+
+        Label(popup, text="Escolha uma opção:", font=('Ivy 10 bold')).pack(pady=10)
+
+        Button(popup, text="Exportar todos os dados", font=('Ivy 10'), width=30, command=lambda: [popup.destroy(), self.exportar_excel()]).pack(pady=3)
+        Button(popup, text="Baixar modelo em branco", font=('Ivy 10'), width=30, command=lambda: [popup.destroy(), self.exportar_modelo_excel()]).pack(pady=3)
+        Button(popup, text="Importar planilha preenchida", font=('Ivy 10'), width=30, command=lambda: [popup.destroy(), self.importar_excel()]).pack(pady=3)
+
+    def exportar_modelo_excel(self):
+        from pandas import DataFrame
+        colunas = ['Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
+        df = DataFrame(columns=colunas)
+
+        caminho = filedialog.asksaveasfilename(
+            defaultextension='.xlsx',
+            filetypes=[('Planilha Excel', '*.xlsx')],
+            title='Salvar modelo'
+        )
+        if caminho:
+            try:
+                df.to_excel(caminho, index=False)
+                messagebox.showinfo("Sucesso", "Modelo salvo com sucesso.")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao salvar modelo: {e}")
+
+    def importar_excel(self):
+        import pandas as pd
+
+        caminho = filedialog.askopenfilename(
+            filetypes=[("Planilhas Excel", "*.xlsx")],
+            title="Selecione a planilha preenchida"
+        )
+
+        if not caminho:
+            return
+
+        try:
+            df = pd.read_excel(caminho)
+
+            colunas_esperadas = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
+            if list(df.columns) != colunas_esperadas:
+                messagebox.showerror("Erro", "Colunas inválidas na planilha.\nEsperado:\n" + ', '.join(colunas_esperadas))
+                return
+
+            erros_detalhados = []
+            inseridos = 0
+
+            for i, row in df.iterrows():
+                linha_num = i + 2
+                nome = str(row['Nome']).strip()
+                email = str(row['Email']).strip()
+                telefone = str(row['Telefone']).strip()
+                sexo = str(row['Sexo']).strip()
+                data = str(row['Data Nasc.']).split(" ")[0]
+                endereco = str(row['Endereço']).strip()
+                curso = str(row['Curso']).strip()
+                imagem = 'assets/icons/Logo.png'
+
+                from validacoes import (
+                    validar_nome_completo, validar_email, validar_telefone,
+                    validar_sexo, validar_endereco, validar_curso
+                )
+
+                falhas = []
+
+                if not validar_nome_completo(nome): falhas.append('Nome')
+                if not validar_email(email): falhas.append('Email')
+                if not validar_telefone(telefone): falhas.append('Telefone')
+                if not validar_sexo(sexo): falhas.append('Sexo')
+                if not validar_endereco(endereco): falhas.append('Endereço')
+                if not validar_curso(curso, self.db.get_cursos()): falhas.append('Curso')
+
+                if falhas:
+                    erros_detalhados.append(f"Linha {linha_num}: {nome or '---'} — campos inválidos: {', '.join(falhas)}")
+                else:
+                    id_aluno = row.get('Id')
+                    if pd.notna(id_aluno):
+                        # Atualiza aluno existente
+                        self.db.update_student([
+                            nome, email, telefone, sexo, data, endereco, curso, imagem, int(id_aluno)
+                        ])
+                    else:
+                        # Insere novo aluno
+                        self.db.register_students([
+                            nome, email, telefone, sexo, data, endereco, curso, imagem
+                        ])
+                    inseridos += 1
+
+            self.mostrar_alunos()
+
+            msg = f"Alunos inseridos: {inseridos}\nFalhas: {len(erros_detalhados)}"
+            if erros_detalhados:
+                msg += "\n\nDetalhes das falhas:\n" + "\n".join(erros_detalhados)
+                self._mostrar_erro_detalhado(msg)
+            else:
+                messagebox.showinfo("Importação concluída", msg)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao importar: {e}")
+
+    def _mostrar_erro_detalhado(self, texto):
+        popup = Toplevel(self.root)
+        popup.title("Falhas na Importação")
+        popup.geometry("500x400")
+        popup.resizable(False, False)
+
+        Label(popup, text="Alguns registros não foram importados:", font=('Ivy 10 bold')).pack(pady=(10, 5))
+
+        from tkinter import scrolledtext
+        text_area = scrolledtext.ScrolledText(popup, wrap='word', width=60, height=20)
+        text_area.insert('1.0', texto)
+        text_area.config(state='disabled')
+        text_area.pack(padx=10, pady=5)
 
 def main():
     root = Tk()

@@ -31,7 +31,7 @@ class SistemaDeCadastro:
             )
         ''')
 
-        cursos_iniciais = ['Engenharia', 'Medicina', 'ADS']
+        cursos_iniciais = ['Outros']
         for curso in cursos_iniciais:
             try:
                 self.c.execute("INSERT INTO cursos (nome) VALUES (?)", (curso,))
