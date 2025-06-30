@@ -16,6 +16,8 @@ from validacoes import (
 )
 import pandas as pd
 from tkinter import filedialog
+from io import BytesIO
+from tkinter import scrolledtext
 
 class InterfaceCadastro:
     def __init__(self, root):
@@ -157,7 +159,7 @@ class InterfaceCadastro:
         data = self.data_nascimento.get()
         endereco = self.e_endereco.get()
         curso = self.c_curso.get()
-        imagem = self.imagem_path
+        imagem_blob = SistemaDeCadastro.ler_imagem_como_blob(self.imagem_path)
 
         # Verificação de campos obrigatórios
         if '' in [nome, email, telefone, sexo, data, endereco, curso]:
@@ -189,7 +191,7 @@ class InterfaceCadastro:
             return
 
         self.db.register_students([
-            nome, email, telefone, sexo, data, endereco, curso, imagem
+            nome, email, telefone, sexo, data, endereco, curso, imagem_blob
         ])
         self.limpar_campos()
         self.mostrar_alunos()
@@ -211,11 +213,14 @@ class InterfaceCadastro:
                 self.data_nascimento.set_date(aluno[5])
                 self.e_endereco.insert(0, aluno[6])
                 self.c_curso.set(aluno[7])
-                self.imagem_path = aluno[8]
 
-                nova_img = ImageTk.PhotoImage(Image.open(self.imagem_path).resize((130, 130)))
+                imagem_blob = aluno[8]
+                imagem_pil = Image.open(BytesIO(imagem_blob))
+                nova_img = ImageTk.PhotoImage(imagem_pil.resize((130, 130)))
+
                 self.img_label.configure(image=nova_img)
                 self.img_label.image = nova_img
+
                 self.id_atual = aluno[0]
                 self.e_procurar.delete(0, END)
                 self.botao_adicionar.config(state=DISABLED)
@@ -239,7 +244,7 @@ class InterfaceCadastro:
             data = self.data_nascimento.get()
             endereco = self.e_endereco.get()
             curso = self.c_curso.get()
-            imagem = self.imagem_path
+            imagem_blob = SistemaDeCadastro.ler_imagem_como_blob(self.imagem_path)
 
             if '' in [nome, email, telefone, sexo, data, endereco, curso]:
                 messagebox.showerror("Erro", "Preencha todos os campos.")
@@ -269,7 +274,7 @@ class InterfaceCadastro:
                 messagebox.showerror("Erro", "Curso inválido.")
                 return
 
-            dados = [nome, email, telefone, sexo, data, endereco, curso, imagem, self.id_atual]
+            dados = [nome, email, telefone, sexo, data, endereco, curso, imagem_blob, self.id_atual]
             self.db.update_student(dados)
             self.limpar_campos()
             self.desativar_botoes_edicao()
@@ -358,7 +363,6 @@ class InterfaceCadastro:
         Button(popup, text="Salvar", command=salvar).grid(row=2, column=0, sticky='w', padx=10, pady=(0, 10))
 
     def exportar_excel(self):
-        from pandas import DataFrame
         dados = self.db.view_all_students()
         if not dados:
             messagebox.showinfo("Aviso", "Não há dados para exportar.")
@@ -366,7 +370,7 @@ class InterfaceCadastro:
 
         dados_sem_imagem = [linha[:-1] for linha in dados]  # remove última coluna (imagem_path)
         colunas = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
-        df = DataFrame(dados_sem_imagem, columns=colunas)
+        df = pd.DataFrame(dados_sem_imagem, columns=colunas)
 
 
         caminho = filedialog.asksaveasfilename(
@@ -394,9 +398,8 @@ class InterfaceCadastro:
         Button(popup, text="Importar planilha preenchida", font=('Ivy 10'), width=30, command=lambda: [popup.destroy(), self.importar_excel()]).pack(pady=3)
 
     def exportar_modelo_excel(self):
-        from pandas import DataFrame
         colunas = ['Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
-        df = DataFrame(columns=colunas)
+        df = pd.DataFrame(columns=colunas)
 
         caminho = filedialog.asksaveasfilename(
             defaultextension='.xlsx',
@@ -411,7 +414,6 @@ class InterfaceCadastro:
                 messagebox.showerror("Erro", f"Erro ao salvar modelo: {e}")
 
     def importar_excel(self):
-        import pandas as pd
 
         caminho = filedialog.askopenfilename(
             filetypes=[("Planilhas Excel", "*.xlsx")],
@@ -443,11 +445,6 @@ class InterfaceCadastro:
                 curso = str(row['Curso']).strip()
                 imagem = 'assets/icons/Logo.png'
 
-                from validacoes import (
-                    validar_nome_completo, validar_email, validar_telefone,
-                    validar_sexo, validar_endereco, validar_curso
-                )
-
                 falhas = []
 
                 if not validar_nome_completo(nome): falhas.append('Nome')
@@ -462,12 +459,10 @@ class InterfaceCadastro:
                 else:
                     id_aluno = row.get('Id')
                     if pd.notna(id_aluno):
-                        # Atualiza aluno existente
                         self.db.update_student([
                             nome, email, telefone, sexo, data, endereco, curso, imagem, int(id_aluno)
                         ])
                     else:
-                        # Insere novo aluno
                         self.db.register_students([
                             nome, email, telefone, sexo, data, endereco, curso, imagem
                         ])
@@ -493,7 +488,6 @@ class InterfaceCadastro:
 
         Label(popup, text="Alguns registros não foram importados:", font=('Ivy 10 bold')).pack(pady=(10, 5))
 
-        from tkinter import scrolledtext
         text_area = scrolledtext.ScrolledText(popup, wrap='word', width=60, height=20)
         text_area.insert('1.0', texto)
         text_area.config(state='disabled')

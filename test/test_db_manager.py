@@ -8,7 +8,7 @@ class TestSistemaDeCadastro(unittest.TestCase):
         self.db = SistemaDeCadastro(db_name=':memory:')
 
     def test_adicionar_curso(self):
-        sucesso = self.db.adicionar_curso("Arquitetura")
+        sucesso = self.db.adicionar_curso("Engenharia")
         self.assertTrue(sucesso)
 
         cursos = self.db.get_cursos()
@@ -58,7 +58,7 @@ class TestSistemaDeCadastro(unittest.TestCase):
     
     def test_adicionar_curso_insensivel_acentos_maiusculas(self):
         self.db.adicionar_curso("Veterinária")
-        resultado = self.db.adicionar_curso("veterinaria")  # sem acento, minúsculo
+        resultado = self.db.adicionar_curso("veterinaria")
         self.assertFalse(resultado)
 
     def test_inserir_varios_alunos(self):
@@ -73,7 +73,7 @@ class TestSistemaDeCadastro(unittest.TestCase):
         self.assertEqual(len(todos), 2)
 
     def test_buscar_aluno_inexistente(self):
-        resultado = self.db.search_student(9999)  # ID que não existe
+        resultado = self.db.search_student(9999)
         self.assertIsNone(resultado)
 
     def test_deletar_aluno_inexistente(self):
