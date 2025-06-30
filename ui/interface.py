@@ -1,5 +1,6 @@
-from datetime import date
-import os
+from datetime import date, datetime
+from dateutil import parser
+import sys, os
 from tkinter import *
 from tkinter import ttk, messagebox, filedialog
 from tkcalendar import DateEntry
@@ -19,6 +20,12 @@ from tkinter import filedialog
 from io import BytesIO
 from tkinter import scrolledtext
 
+def resource_path(relative_path):
+    try:
+        return os.path.join(sys._MEIPASS, relative_path)
+    except:
+        return os.path.join(os.path.abspath("."), relative_path)
+
 class InterfaceCadastro:
     def __init__(self, root):
         self.root = root
@@ -29,7 +36,7 @@ class InterfaceCadastro:
         self.id_atual = None
 
         self.db = SistemaDeCadastro()
-        self.imagem_path = 'assets/icons/Logo.png'
+        self.imagem_path = resource_path('assets/icons/Logo.png')
 
         self.style = ttk.Style(self.root)
         self.style.theme_use("clam")
@@ -74,7 +81,8 @@ class InterfaceCadastro:
 
         Label(self.frame_detalhes, text="Data de nascimento *", font=('Ivy 10'), bg='#feffff').place(x=220, y=10)
         self.data_nascimento = DateEntry(self.frame_detalhes, width=15, justify='center',
-                                         background='darkblue', foreground='white', borderwidth=2, year=2025)
+                                 background='darkblue', foreground='white',
+                                 borderwidth=2, year=2025, date_pattern='dd/mm/yyyy')
         self.data_nascimento.place(x=224, y=40)
 
         self.e_endereco = self._criar_entry("Endereço *", 220, 70, 224, 100, width=18)
@@ -120,7 +128,7 @@ class InterfaceCadastro:
         return entry
 
     def _criar_botao(self, texto, comando, icone, linha):
-        img = ImageTk.PhotoImage(Image.open(f'assets/icons/{icone}').resize((25, 25)))
+        img = ImageTk.PhotoImage(Image.open(resource_path(f'assets/icons/{icone}')).resize((25, 25)))
         btn = Button(self.frame_botoes, command=comando, image=img, text=f'  {texto}', width=100,
                     compound=LEFT, font=('Ivy 11'), bg='#feffff')
         btn.image = img
@@ -143,7 +151,7 @@ class InterfaceCadastro:
         for combo in [self.c_sexo, self.c_curso]:
             combo.set('')
         self.data_nascimento.set_date(date.today())
-        self.imagem_path = 'assets/icons/Logo.png'
+        self.imagem_path = resource_path('assets/icons/Logo.png')
         nova_img = ImageTk.PhotoImage(Image.open(self.imagem_path).resize((130, 130)))
         self.img_label.configure(image=nova_img)
         self.img_label.image = nova_img
@@ -156,7 +164,7 @@ class InterfaceCadastro:
         email = self.e_email.get()
         telefone = self.e_telefone.get()
         sexo = self.c_sexo.get()
-        data = self.data_nascimento.get()
+        data = datetime.strptime(self.data_nascimento.get(), "%d/%m/%Y").strftime("%Y-%m-%d")
         endereco = self.e_endereco.get()
         curso = self.c_curso.get()
         imagem_blob = SistemaDeCadastro.ler_imagem_como_blob(self.imagem_path)
@@ -198,38 +206,50 @@ class InterfaceCadastro:
 
     def procurar(self):
         try:
-            id_aluno = int(self.e_procurar.get())
+            id_texto = self.e_procurar.get().strip()
+            if not id_texto.isdigit():
+                messagebox.showerror("Erro", "Informe um ID numérico válido.")
+                return
+
+            id_aluno = int(id_texto)
             aluno = self.db.search_student(id_aluno)
-            if aluno:
-                self.e_nome.delete(0, END)
-                self.e_email.delete(0, END)
-                self.e_telefone.delete(0, END)
-                self.e_endereco.delete(0, END)
 
-                self.e_nome.insert(0, aluno[1])
-                self.e_email.insert(0, aluno[2])
-                self.e_telefone.insert(0, aluno[3])
-                self.c_sexo.set(aluno[4])
-                self.data_nascimento.set_date(aluno[5])
-                self.e_endereco.insert(0, aluno[6])
-                self.c_curso.set(aluno[7])
+            if not aluno:
+                messagebox.showerror("Erro", "Aluno não encontrado.")
+                return
 
-                imagem_blob = aluno[8]
+            self.e_nome.delete(0, END)
+            self.e_email.delete(0, END)
+            self.e_telefone.delete(0, END)
+            self.e_endereco.delete(0, END)
+
+            self.e_nome.insert(0, aluno[1])
+            self.e_email.insert(0, aluno[2])
+            self.e_telefone.insert(0, aluno[3])
+            self.c_sexo.set(aluno[4])
+            data_formatada = datetime.strptime(aluno[5], "%Y-%m-%d").strftime("%d/%m/%Y")
+            self.data_nascimento.set_date(data_formatada)
+            self.e_endereco.insert(0, aluno[6])
+            self.c_curso.set(aluno[7])
+
+            imagem_blob = aluno[8]
+            if imagem_blob:
                 imagem_pil = Image.open(BytesIO(imagem_blob))
                 nova_img = ImageTk.PhotoImage(imagem_pil.resize((130, 130)))
-
                 self.img_label.configure(image=nova_img)
                 self.img_label.image = nova_img
 
-                self.id_atual = aluno[0]
-                self.e_procurar.delete(0, END)
-                self.botao_adicionar.config(state=DISABLED)
-                self.botao_update.config(state=NORMAL)
-                self.botao_delete.config(state=NORMAL)
-            else:
-                messagebox.showerror("Erro", "Aluno não encontrado.")
-        except ValueError:
-            messagebox.showerror("Erro", "ID inválido.")
+            self.id_atual = aluno[0]
+            self.e_procurar.delete(0, END)
+            self.botao_adicionar.config(state=DISABLED)
+            self.botao_update.config(state=NORMAL)
+            self.botao_delete.config(state=NORMAL)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Erro", f"Erro inesperado: {e}")
+
 
     def atualizar(self):
         try:
@@ -241,7 +261,7 @@ class InterfaceCadastro:
             email = self.e_email.get()
             telefone = self.e_telefone.get()
             sexo = self.c_sexo.get()
-            data = self.data_nascimento.get()
+            data = datetime.strptime(self.data_nascimento.get(), "%d/%m/%Y").strftime("%Y-%m-%d")
             endereco = self.e_endereco.get()
             curso = self.c_curso.get()
             imagem_blob = SistemaDeCadastro.ler_imagem_como_blob(self.imagem_path)
@@ -321,7 +341,13 @@ class InterfaceCadastro:
             n+=1
 
         for item in df_list:
+            item = list(item)
+            try:
+                item[5] = datetime.strptime(item[5], "%Y-%m-%d").strftime("%d/%m/%Y")
+            except:
+                pass
             tree_aluno.insert('', 'end', values=item)
+
 
     def desativar_botoes_edicao(self):
         self.botao_adicionar.config(state=NORMAL)
@@ -368,10 +394,17 @@ class InterfaceCadastro:
             messagebox.showinfo("Aviso", "Não há dados para exportar.")
             return
 
-        dados_sem_imagem = [linha[:-1] for linha in dados]  # remove última coluna (imagem_path)
+        dados_sem_imagem = []
+        for linha in dados:
+            linha_sem_img = list(linha[:-1])  # remove imagem (última coluna)
+            try:
+                linha_sem_img[5] = datetime.strptime(linha_sem_img[5], "%Y-%m-%d").strftime("%d/%m/%Y")
+            except:
+                pass 
+            dados_sem_imagem.append(linha_sem_img)
+
         colunas = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
         df = pd.DataFrame(dados_sem_imagem, columns=colunas)
-
 
         caminho = filedialog.asksaveasfilename(
             defaultextension='.xlsx',
@@ -398,7 +431,7 @@ class InterfaceCadastro:
         Button(popup, text="Importar planilha preenchida", font=('Ivy 10'), width=30, command=lambda: [popup.destroy(), self.importar_excel()]).pack(pady=3)
 
     def exportar_modelo_excel(self):
-        colunas = ['Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
+        colunas = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
         df = pd.DataFrame(columns=colunas)
 
         caminho = filedialog.asksaveasfilename(
@@ -414,7 +447,6 @@ class InterfaceCadastro:
                 messagebox.showerror("Erro", f"Erro ao salvar modelo: {e}")
 
     def importar_excel(self):
-
         caminho = filedialog.askopenfilename(
             filetypes=[("Planilhas Excel", "*.xlsx")],
             title="Selecione a planilha preenchida"
@@ -426,9 +458,17 @@ class InterfaceCadastro:
         try:
             df = pd.read_excel(caminho)
 
-            colunas_esperadas = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
-            if list(df.columns) != colunas_esperadas:
-                messagebox.showerror("Erro", "Colunas inválidas na planilha.\nEsperado:\n" + ', '.join(colunas_esperadas))
+            df = df.map(lambda x: str(x).strip() if isinstance(x, str) else x)
+
+            colunas_com_id = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
+            colunas_sem_id = colunas_com_id[1:]
+
+            possui_id = False
+            if list(df.columns) == colunas_com_id:
+                possui_id = True
+            elif list(df.columns) != colunas_sem_id:
+                messagebox.showerror("Erro", "Colunas inválidas na planilha.\nEsperado:\n" +
+                                    ', '.join(colunas_com_id) + "\nOu:\n" + ', '.join(colunas_sem_id))
                 return
 
             erros_detalhados = []
@@ -436,17 +476,30 @@ class InterfaceCadastro:
 
             for i, row in df.iterrows():
                 linha_num = i + 2
-                nome = str(row['Nome']).strip()
-                email = str(row['Email']).strip()
-                telefone = str(row['Telefone']).strip()
-                sexo = str(row['Sexo']).strip()
-                data = str(row['Data Nasc.']).split(" ")[0]
-                endereco = str(row['Endereço']).strip()
-                curso = str(row['Curso']).strip()
-                imagem = 'assets/icons/Logo.png'
+                nome = row['Nome']
+                email = row['Email']
+                telefone = row['Telefone']
+                sexo = row['Sexo']
+                endereco = row['Endereço']
+                curso = row['Curso']
+
+                data_nasc_raw = row['Data Nasc.']
+                try:
+                    if pd.isna(data_nasc_raw) or str(data_nasc_raw).strip() == '':
+                        raise ValueError("Data vazia")
+
+                    if isinstance(data_nasc_raw, (datetime, pd.Timestamp)):
+                        data = data_nasc_raw.strftime('%Y-%m-%d')
+                    else:
+                        parsed = parser.parse(str(data_nasc_raw), dayfirst=True)
+                        data = parsed.strftime('%Y-%m-%d')
+                except Exception as e:
+                    erros_detalhados.append(f"Linha {linha_num}: Data de nascimento inválida ({data_nasc_raw})")
+                    continue
+
+                imagem = SistemaDeCadastro.ler_imagem_como_blob(resource_path('assets/icons/Logo.png'))
 
                 falhas = []
-
                 if not validar_nome_completo(nome): falhas.append('Nome')
                 if not validar_email(email): falhas.append('Email')
                 if not validar_telefone(telefone): falhas.append('Telefone')
@@ -456,29 +509,33 @@ class InterfaceCadastro:
 
                 if falhas:
                     erros_detalhados.append(f"Linha {linha_num}: {nome or '---'} — campos inválidos: {', '.join(falhas)}")
-                else:
-                    id_aluno = row.get('Id')
-                    if pd.notna(id_aluno):
-                        self.db.update_student([
-                            nome, email, telefone, sexo, data, endereco, curso, imagem, int(id_aluno)
-                        ])
-                    else:
-                        self.db.register_students([
-                            nome, email, telefone, sexo, data, endereco, curso, imagem
-                        ])
-                    inseridos += 1
+                    continue
+
+                id_str = row.get('Id')
+                try:
+                    id_aluno = int(id_str)
+                    self.db.update_student([
+                        nome, email, telefone, sexo, data, endereco, curso, imagem, id_aluno
+                    ])
+                except (ValueError, TypeError):
+                    self.db.register_students([
+                        nome, email, telefone, sexo, data, endereco, curso, imagem
+                    ])
+
+                inseridos += 1
 
             self.mostrar_alunos()
 
-            msg = f"Alunos inseridos: {inseridos}\nFalhas: {len(erros_detalhados)}"
+            msg = f"Alunos inseridos/atualizados: {inseridos}\nFalhas: {len(erros_detalhados)}"
             if erros_detalhados:
-                msg += "\n\nDetalhes das falhas:\n" + "\n".join(erros_detalhados)
+                msg += "\n\nDetalhes:\n" + "\n".join(erros_detalhados)
                 self._mostrar_erro_detalhado(msg)
             else:
                 messagebox.showinfo("Importação concluída", msg)
 
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao importar: {e}")
+
 
     def _mostrar_erro_detalhado(self, texto):
         popup = Toplevel(self.root)

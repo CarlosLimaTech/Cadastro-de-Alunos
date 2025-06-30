@@ -72,7 +72,10 @@ class SistemaDeCadastro:
         return self.c.fetchall()
 
     def search_student(self, id):
-        self.c.execute('SELECT * FROM estudantes WHERE id = ?', (id,))
+        self.c.execute('''
+            SELECT id, nome, email, telefone, sexo, data_nascimento, endereco, curso, picture
+            FROM estudantes WHERE id = ?
+            ''', (id,))
         return self.c.fetchone()
 
     def update_student(self, estudante):
