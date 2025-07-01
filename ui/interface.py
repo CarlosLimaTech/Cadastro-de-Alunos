@@ -13,10 +13,15 @@ from validacoes import (
     validar_sexo,
     validar_endereco,
     normalizar_texto,
-    validar_curso
+    validar_curso,
+    validar_dados_linha
+)
+from services.excel_service import (
+    exportar_dados_para_excel,
+    exportar_modelo_excel,
+    importar_planilha_excel
 )
 import pandas as pd
-from tkinter import filedialog
 from io import BytesIO
 from tkinter import scrolledtext
 
@@ -28,6 +33,7 @@ def resource_path(relative_path):
 
 class InterfaceCadastro:
     def __init__(self, root):
+        self.COLUNAS_EXCEL = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
         self.root = root
         self.root.title("Cadastro de Alunos")
         self.root.geometry('810x550')
@@ -394,18 +400,6 @@ class InterfaceCadastro:
             messagebox.showinfo("Aviso", "Não há dados para exportar.")
             return
 
-        dados_sem_imagem = []
-        for linha in dados:
-            linha_sem_img = list(linha[:-1])  # remove imagem (última coluna)
-            try:
-                linha_sem_img[5] = datetime.strptime(linha_sem_img[5], "%Y-%m-%d").strftime("%d/%m/%Y")
-            except:
-                pass 
-            dados_sem_imagem.append(linha_sem_img)
-
-        colunas = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
-        df = pd.DataFrame(dados_sem_imagem, columns=colunas)
-
         caminho = filedialog.asksaveasfilename(
             defaultextension='.xlsx',
             filetypes=[('Planilha Excel', '*.xlsx')],
@@ -413,10 +407,11 @@ class InterfaceCadastro:
         )
         if caminho:
             try:
-                df.to_excel(caminho, index=False)
+                exportar_dados_para_excel(dados, caminho)
                 messagebox.showinfo("Sucesso", "Exportação concluída!")
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao exportar: {e}")
+
     
     def abrir_popup_excel(self):
         popup = Toplevel(self.root)
@@ -431,9 +426,6 @@ class InterfaceCadastro:
         Button(popup, text="Importar planilha preenchida", font=('Ivy 10'), width=30, command=lambda: [popup.destroy(), self.importar_excel()]).pack(pady=3)
 
     def exportar_modelo_excel(self):
-        colunas = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
-        df = pd.DataFrame(columns=colunas)
-
         caminho = filedialog.asksaveasfilename(
             defaultextension='.xlsx',
             filetypes=[('Planilha Excel', '*.xlsx')],
@@ -441,10 +433,11 @@ class InterfaceCadastro:
         )
         if caminho:
             try:
-                df.to_excel(caminho, index=False)
+                exportar_modelo_excel(caminho, self.COLUNAS_EXCEL)
                 messagebox.showinfo("Sucesso", "Modelo salvo com sucesso.")
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao salvar modelo: {e}")
+
 
     def importar_excel(self):
         caminho = filedialog.askopenfilename(
@@ -456,74 +449,13 @@ class InterfaceCadastro:
             return
 
         try:
-            df = pd.read_excel(caminho)
-
-            df = df.map(lambda x: str(x).strip() if isinstance(x, str) else x)
-
-            colunas_com_id = ['Id', 'Nome', 'Email', 'Telefone', 'Sexo', 'Data Nasc.', 'Endereço', 'Curso']
-            colunas_sem_id = colunas_com_id[1:]
-
-            possui_id = False
-            if list(df.columns) == colunas_com_id:
-                possui_id = True
-            elif list(df.columns) != colunas_sem_id:
-                messagebox.showerror("Erro", "Colunas inválidas na planilha.\nEsperado:\n" +
-                                    ', '.join(colunas_com_id) + "\nOu:\n" + ', '.join(colunas_sem_id))
-                return
-
-            erros_detalhados = []
-            inseridos = 0
-
-            for i, row in df.iterrows():
-                linha_num = i + 2
-                nome = row['Nome']
-                email = row['Email']
-                telefone = row['Telefone']
-                sexo = row['Sexo']
-                endereco = row['Endereço']
-                curso = row['Curso']
-
-                data_nasc_raw = row['Data Nasc.']
-                try:
-                    if pd.isna(data_nasc_raw) or str(data_nasc_raw).strip() == '':
-                        raise ValueError("Data vazia")
-
-                    if isinstance(data_nasc_raw, (datetime, pd.Timestamp)):
-                        data = data_nasc_raw.strftime('%Y-%m-%d')
-                    else:
-                        parsed = parser.parse(str(data_nasc_raw), dayfirst=True)
-                        data = parsed.strftime('%Y-%m-%d')
-                except Exception as e:
-                    erros_detalhados.append(f"Linha {linha_num}: Data de nascimento inválida ({data_nasc_raw})")
-                    continue
-
-                imagem = SistemaDeCadastro.ler_imagem_como_blob(resource_path('assets/icons/Logo.png'))
-
-                falhas = []
-                if not validar_nome_completo(nome): falhas.append('Nome')
-                if not validar_email(email): falhas.append('Email')
-                if not validar_telefone(telefone): falhas.append('Telefone')
-                if not validar_sexo(sexo): falhas.append('Sexo')
-                if not validar_endereco(endereco): falhas.append('Endereço')
-                if not validar_curso(curso, self.db.get_cursos()): falhas.append('Curso')
-
-                if falhas:
-                    erros_detalhados.append(f"Linha {linha_num}: {nome or '---'} — campos inválidos: {', '.join(falhas)}")
-                    continue
-
-                id_str = row.get('Id')
-                try:
-                    id_aluno = int(id_str)
-                    self.db.update_student([
-                        nome, email, telefone, sexo, data, endereco, curso, imagem, id_aluno
-                    ])
-                except (ValueError, TypeError):
-                    self.db.register_students([
-                        nome, email, telefone, sexo, data, endereco, curso, imagem
-                    ])
-
-                inseridos += 1
-
+            imagem = SistemaDeCadastro.ler_imagem_como_blob(resource_path('assets/icons/Logo.png'))
+            inseridos, erros_detalhados = importar_planilha_excel(
+                caminho,
+                self.db,
+                imagem,
+                self.COLUNAS_EXCEL
+            )
             self.mostrar_alunos()
 
             msg = f"Alunos inseridos/atualizados: {inseridos}\nFalhas: {len(erros_detalhados)}"
@@ -533,9 +465,10 @@ class InterfaceCadastro:
             else:
                 messagebox.showinfo("Importação concluída", msg)
 
+        except ValueError as ve:
+            messagebox.showerror("Erro", str(ve))
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao importar: {e}")
-
 
     def _mostrar_erro_detalhado(self, texto):
         popup = Toplevel(self.root)

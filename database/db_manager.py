@@ -99,3 +99,6 @@ class SistemaDeCadastro:
     def ler_imagem_como_blob(caminho_imagem):
         with open(caminho_imagem, 'rb') as file:
             return file.read()
+    
+    def fechar_conexao(self):
+        self.conn.close()

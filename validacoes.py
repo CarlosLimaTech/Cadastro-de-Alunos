@@ -25,3 +25,13 @@ def validar_curso(curso, cursos_disponiveis):
     curso_normalizado = normalizar_texto(curso)
     cursos_normalizados = [normalizar_texto(c) for c in cursos_disponiveis]
     return curso_normalizado in cursos_normalizados
+
+def validar_dados_linha(nome, email, telefone, sexo, endereco, curso, cursos_validos):
+    erros = []
+    if not validar_nome_completo(nome): erros.append('Nome')
+    if not validar_email(email): erros.append('Email')
+    if not validar_telefone(telefone): erros.append('Telefone')
+    if not validar_sexo(sexo): erros.append('Sexo')
+    if not validar_endereco(endereco): erros.append('Endereço')
+    if not validar_curso(curso, cursos_validos): erros.append('Curso')
+    return erros
