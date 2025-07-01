@@ -243,7 +243,9 @@ class InterfaceCadastro:
                 imagem_pil = Image.open(BytesIO(imagem_blob))
                 nova_img = ImageTk.PhotoImage(imagem_pil.resize((130, 130)))
                 self.img_label.configure(image=nova_img)
-                self.img_label.image = nova_img
+                self.img_label.image = nova_img  # mantém referência
+                self.imagem_path = None
+                self.imagem_atual_blob = imagem_blob
 
             self.id_atual = aluno[0]
             self.e_procurar.delete(0, END)
@@ -270,7 +272,11 @@ class InterfaceCadastro:
             data = datetime.strptime(self.data_nascimento.get(), "%d/%m/%Y").strftime("%Y-%m-%d")
             endereco = self.e_endereco.get()
             curso = self.c_curso.get()
-            imagem_blob = SistemaDeCadastro.ler_imagem_como_blob(self.imagem_path)
+            if self.imagem_path:
+                imagem_blob = SistemaDeCadastro.ler_imagem_como_blob(self.imagem_path)
+            else:
+                imagem_blob = self.imagem_atual_blob
+
 
             if '' in [nome, email, telefone, sexo, data, endereco, curso]:
                 messagebox.showerror("Erro", "Preencha todos os campos.")
