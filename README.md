@@ -1,7 +1,7 @@
 # 📘 Cadastro de Alunos
 Sistema completo para cadastro, consulta, atualização, exclusão e importação/exportação de dados de estudantes, com interface gráfica (Tkinter), persistência em banco de dados SQLite e suporte a planilhas Excel.
 
-Link do video de demonstração - https://youtu.be/jsYRup_Wd_U
+Link do video de demonstração - https://1drv.ms/v/c/6930af1f98e7c49c/ES-xt5ttpn1Fr-pNcV9UIJwBuJVuOwr3YjWjOmF4lwKhwA?e=snWlPz
 
 ## 📌 Funcionalidades
 - Cadastro de estudantes com:
